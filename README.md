@@ -14,3 +14,4 @@ Demo monorepo for two experiments on the k3s homelab (design: k3s-infra `docs/pr
 
 `deploy/chart` is the single Helm chart both experiments use. Images are built by GitHub Actions
 into `ghcr.io/james-tronai/pilot-monorepo/<service>:<sha>`.
+# preview test 2
