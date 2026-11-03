@@ -2,16 +2,18 @@
 # preview. Dev mode swaps each container for a stock python/node image, syncs the source
 # in and runs the hot-reloading dev server, so no image build is needed. startContainer: true
 # holds the container until the initial sync is done (the command needs the sources).
-#   devspace use namespace dev-james --create
-#   devspace dev          # then open http://localhost:5173
+#   devspace dev          # first run asks for your dev id once (cached in .devspace/, gitignored);
+#                         # everything lands in namespace dev-<id>; then open http://localhost:5173
 #   devspace purge
+# The namespace dev-<id> and its RBAC come from k3s-infra (manifests/remote-access/dev-<id>.yaml).
 version: v2beta1
 name: pilot-monorepo
 
 vars:
+  # Per-developer id: env var DEV_ID wins, else the cached answer, else the question (once).
   DEV_ID:
-    source: env
-    default: james
+    question: Your developer id (lowercase; namespace dev-<id>, Mongo db dev_<id>)?
+    validationPattern: "^[a-z][a-z0-9]*$"
   # Preview variant B (k3s-infra docs/preview-devspace-design.md §4): the in-cluster Job runs
   #   RELEASE=prb-<n> PR=<n> SHA=<head sha> devspace run-pipeline preview -n preview
   # and tears down with the same vars + `devspace purge`.
@@ -37,6 +39,7 @@ pipelines:
     run: |-
       # --set here edits the DEPLOYMENT config, so chart values live under helm.values.
       create_deployments pilot \
+        --set namespace=${DEVSPACE_NAMESPACE} \
         --set helm.values.image.tag=${SHA} \
         --set helm.values.host=prb-${PR}.preview.zenbyte.biz \
         --set helm.values.mongo.db=prb_${PR} \
@@ -45,6 +48,7 @@ pipelines:
 
 deployments:
   pilot:
+    namespace: dev-${DEV_ID}
     helm:
       releaseName: ${RELEASE}
       chart:
@@ -59,6 +63,7 @@ deployments:
 
 dev:
   api-orders:
+    namespace: dev-${DEV_ID}
     imageSelector: ghcr.io/james-tronai/pilot-monorepo/api-orders
     devImage: python:3.12-slim
     workingDir: /app
@@ -71,6 +76,7 @@ dev:
     ports:
       - port: "8001:8000"
   api-chat:
+    namespace: dev-${DEV_ID}
     imageSelector: ghcr.io/james-tronai/pilot-monorepo/api-chat
     devImage: python:3.12-slim
     workingDir: /app
@@ -83,6 +89,7 @@ dev:
     ports:
       - port: "8002:8000"
   web:
+    namespace: dev-${DEV_ID}
     imageSelector: ghcr.io/james-tronai/pilot-monorepo/web
     devImage: node:22-alpine
     workingDir: /app
