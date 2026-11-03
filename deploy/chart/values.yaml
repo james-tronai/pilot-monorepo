@@ -13,7 +13,7 @@ ingress:
   forwardAuthMiddleware: ""
   # With forwardAuthMiddleware: the oauth2-proxy Service (same namespace) that /oauth2/* on this
   # host is routed to, so the middleware's 302 /oauth2/start?rd=… lands on the proxy.
-  ssoService: {name: preview-sso, port: 4180}
+  ssoService: {name: preview-sso, port: 80}
 
 mongo:
   url: mongodb://mongodb.preview.svc:27017
