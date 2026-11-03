@@ -19,7 +19,7 @@ mongo:
   url: mongodb://mongodb.preview.svc:27017
   db: pilot
 redis:
-  url: redis://redis-master.preview.svc:6379/0
+  url: redis://redis.preview.svc:6379/0
   prefix: "pilot:"
 openrouter:
   # Secret in the release namespace with key OPENROUTER_API_KEY. Not created by this chart.
