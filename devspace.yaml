@@ -35,13 +35,13 @@ pipelines:
       create_deployments --all
   preview:
     run: |-
+      # --set here edits the DEPLOYMENT config, so chart values live under helm.values.
       create_deployments pilot \
-        --set image.tag=${SHA} \
-        --set host=prb-${PR}.preview.zenbyte.biz \
-        --set mongo.db=prb_${PR} \
-        --set "redis.prefix=prb${PR}:" \
-        --set ingress.forwardAuthMiddleware=preview-sso-auth \
-        --set nodeSelector.homelab/role=agents
+        --set helm.values.image.tag=${SHA} \
+        --set helm.values.host=prb-${PR}.preview.zenbyte.biz \
+        --set helm.values.mongo.db=prb_${PR} \
+        --set "helm.values.redis.prefix=prb${PR}:" \
+        --set helm.values.ingress.forwardAuthMiddleware=preview-sso-auth
 
 deployments:
   pilot:
