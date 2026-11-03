@@ -46,7 +46,7 @@ deployments:
         mongo:
           db: dev_${DEV_ID}
         redis:
-          prefix: dev${DEV_ID}:
+          prefix: "dev${DEV_ID}:"
         nodeSelector:
           homelab/role: agents
 
