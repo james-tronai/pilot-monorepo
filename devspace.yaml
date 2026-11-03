@@ -1,6 +1,7 @@
 # DevSpace: one full environment per developer in namespace dev-<you>, same Helm chart as
 # preview. Dev mode swaps each container for a stock python/node image, syncs the source
-# in and runs the hot-reloading dev server, so no image build is needed.
+# in and runs the hot-reloading dev server, so no image build is needed. startContainer: true
+# holds the container until the initial sync is done (the command needs the sources).
 #   devspace use namespace dev-james --create
 #   devspace dev          # then open http://localhost:5173
 #   devspace purge
@@ -58,6 +59,7 @@ dev:
     sync:
       - path: ./apps/api-orders:/app
         excludePaths: [.venv, __pycache__]
+        startContainer: true
     command: ["sh", "-c"]
     args: ["pip install -q uv && uv pip install --system -q . && exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]
     ports:
@@ -69,6 +71,7 @@ dev:
     sync:
       - path: ./apps/api-chat:/app
         excludePaths: [.venv, __pycache__]
+        startContainer: true
     command: ["sh", "-c"]
     args: ["pip install -q uv && uv pip install --system -q . && exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]
     ports:
@@ -80,6 +83,7 @@ dev:
     sync:
       - path: ./apps/web:/app
         excludePaths: [node_modules, dist]
+        startContainer: true
     env:
       - name: API_ORDERS_URL
         value: http://pilot-api-orders:8000
