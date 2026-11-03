@@ -17,6 +17,14 @@ spec:
   tls:
     secretName: {{ .Release.Name }}-tls
   routes:
+    {{- if .Values.ingress.forwardAuthMiddleware }}
+    - kind: Rule
+      match: Host({{ .Values.host | quote }}) && PathPrefix("/oauth2/")
+      priority: 20
+      services:
+        - name: {{ .Values.ingress.ssoService.name }}
+          port: {{ .Values.ingress.ssoService.port }}
+    {{- end }}
     {{- range $svc, $cfg := .Values.services }}
     - kind: Rule
       {{- if eq $cfg.path "/" }}
