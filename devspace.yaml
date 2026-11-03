@@ -12,6 +12,18 @@ vars:
   DEV_ID:
     source: env
     default: james
+  # Preview variant B (k3s-infra docs/preview-devspace-design.md §4): the in-cluster Job runs
+  #   RELEASE=prb-<n> PR=<n> SHA=<head sha> devspace run-pipeline preview -n preview
+  # and tears down with the same vars + `devspace purge`.
+  RELEASE:
+    source: env
+    default: pilot
+  PR:
+    source: env
+    default: "0"
+  SHA:
+    source: env
+    default: main
 
 pipelines:
   dev:
@@ -21,26 +33,20 @@ pipelines:
   deploy:
     run: |-
       create_deployments --all
-  # Preview variant B (docs/preview-devspace-design.md §4): run in-cluster with PR and SHA.
   preview:
-    flags:
-      - name: pr
-        type: string
-      - name: sha
-        type: string
     run: |-
       create_deployments pilot \
-        --set image.tag=$(get_flag sha) \
-        --set host=pr-$(get_flag pr).preview.zenbyte.biz \
-        --set mongo.db=pr_$(get_flag pr) \
-        --set redis.prefix=pr$(get_flag pr): \
+        --set image.tag=${SHA} \
+        --set host=prb-${PR}.preview.zenbyte.biz \
+        --set mongo.db=prb_${PR} \
+        --set "redis.prefix=prb${PR}:" \
         --set ingress.forwardAuthMiddleware=preview-sso-auth \
         --set nodeSelector.homelab/role=agents
 
 deployments:
   pilot:
     helm:
-      releaseName: pilot
+      releaseName: ${RELEASE}
       chart:
         path: ./deploy/chart
       values:
