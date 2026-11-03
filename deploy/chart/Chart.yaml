@@ -1,0 +1,6 @@
+apiVersion: v2
+name: pilot
+description: pilot-monorepo (api-orders, api-chat, web) — one release per PR preview or per developer
+type: application
+version: 0.1.0
+appVersion: "0.1.0"

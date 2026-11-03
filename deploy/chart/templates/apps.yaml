@@ -1,0 +1,54 @@
+{{- range $svc, $cfg := .Values.services }}
+{{- $ctx := dict "Release" $.Release "svc" $svc }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "pilot.name" $ctx }}
+  labels: {{ include "pilot.labels" $ctx | nindent 4 }}
+spec:
+  replicas: 1
+  selector:
+    matchLabels: {{ include "pilot.labels" $ctx | nindent 6 }}
+  template:
+    metadata:
+      labels: {{ include "pilot.labels" $ctx | nindent 8 }}
+    spec:
+      {{- with $.Values.nodeSelector }}
+      nodeSelector: {{ toYaml . | nindent 8 }}
+      {{- end }}
+      containers:
+        - name: {{ $svc }}
+          image: {{ $.Values.image.registry }}/{{ $svc }}:{{ $.Values.image.tag }}
+          imagePullPolicy: {{ $.Values.image.pullPolicy }}
+          ports:
+            - name: http
+              containerPort: {{ $cfg.port }}
+          env:
+            - {name: GIT_SHA, value: {{ $.Values.image.tag | quote }}}
+            {{- if eq $svc "api-orders" }}
+            - {name: MONGO_URL, value: {{ $.Values.mongo.url | quote }}}
+            - {name: MONGO_DB, value: {{ $.Values.mongo.db | quote }}}
+            - {name: REDIS_URL, value: {{ $.Values.redis.url | quote }}}
+            - {name: REDIS_PREFIX, value: {{ $.Values.redis.prefix | quote }}}
+            {{- else if eq $svc "api-chat" }}
+            - {name: OPENROUTER_MODEL, value: {{ $.Values.openrouter.model | quote }}}
+            - name: OPENROUTER_API_KEY
+              valueFrom: {secretKeyRef: {name: {{ $.Values.openrouter.secretName }}, key: OPENROUTER_API_KEY, optional: true}}
+            {{- end }}
+          readinessProbe:
+            httpGet: {path: {{ if eq $svc "web" }}/healthz{{ else }}{{ $cfg.path }}/healthz{{ end }}, port: http}
+          resources: {{ toYaml $.Values.resources | nindent 12 }}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: {{ include "pilot.name" $ctx }}
+  labels: {{ include "pilot.labels" $ctx | nindent 4 }}
+spec:
+  selector: {{ include "pilot.labels" $ctx | nindent 4 }}
+  ports:
+    - name: http
+      port: {{ $cfg.port }}
+      targetPort: http
+{{- end }}

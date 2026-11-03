@@ -1,0 +1,41 @@
+# One release = one full environment. Preview sets image.tag/host per PR; DevSpace sets
+# mongo.db/redis.prefix per developer and leaves host empty (port-forward only).
+image:
+  registry: ghcr.io/james-tronai/pilot-monorepo
+  tag: main
+  pullPolicy: IfNotPresent
+
+# Public host. Empty = no IngressRoute / Certificate (DevSpace).
+host: ""
+ingress:
+  issuer: letsencrypt-prod
+  # Traefik Middleware (same namespace) applied to every route; empty = none.
+  forwardAuthMiddleware: ""
+
+mongo:
+  url: mongodb://mongodb.preview.svc:27017
+  db: pilot
+redis:
+  url: redis://redis-master.preview.svc:6379/0
+  prefix: "pilot:"
+openrouter:
+  # Secret in the release namespace with key OPENROUTER_API_KEY. Not created by this chart.
+  secretName: openrouter
+  model: openai/gpt-4o-mini
+
+nodeSelector: {}
+
+services:
+  api-orders:
+    port: 8000
+    path: /api/orders
+  api-chat:
+    port: 8000
+    path: /api/chat
+  web:
+    port: 80
+    path: /
+
+resources:
+  requests: {cpu: 50m, memory: 128Mi}
+  limits: {memory: 512Mi}

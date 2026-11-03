@@ -1,0 +1,37 @@
+{{- if .Values.host }}
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: {{ .Release.Name }}-cert
+spec:
+  secretName: {{ .Release.Name }}-tls
+  dnsNames: [{{ .Values.host | quote }}]
+  issuerRef: {kind: ClusterIssuer, name: {{ .Values.ingress.issuer }}}
+---
+apiVersion: traefik.io/v1alpha1
+kind: IngressRoute
+metadata:
+  name: {{ .Release.Name }}
+spec:
+  entryPoints: [websecure]
+  tls:
+    secretName: {{ .Release.Name }}-tls
+  routes:
+    {{- range $svc, $cfg := .Values.services }}
+    - kind: Rule
+      {{- if eq $cfg.path "/" }}
+      match: Host({{ $.Values.host | quote }})
+      priority: 1
+      {{- else }}
+      match: Host({{ $.Values.host | quote }}) && PathPrefix({{ $cfg.path | quote }})
+      priority: 10
+      {{- end }}
+      {{- with $.Values.ingress.forwardAuthMiddleware }}
+      middlewares:
+        - name: {{ . }}
+      {{- end }}
+      services:
+        - name: {{ $.Release.Name }}-{{ $svc }}
+          port: {{ $cfg.port }}
+    {{- end }}
+{{- end }}

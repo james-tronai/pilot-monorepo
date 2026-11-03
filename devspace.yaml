@@ -1,0 +1,91 @@
+# DevSpace: one full environment per developer in namespace dev-<you>, same Helm chart as
+# preview. Dev mode swaps each container for a stock python/node image, syncs the source
+# in and runs the hot-reloading dev server, so no image build is needed.
+#   devspace use namespace dev-james --create
+#   devspace dev          # then open http://localhost:5173
+#   devspace purge
+version: v2beta1
+name: pilot-monorepo
+
+vars:
+  DEV_ID:
+    source: env
+    default: james
+
+pipelines:
+  dev:
+    run: |-
+      create_deployments --all
+      start_dev --all
+  deploy:
+    run: |-
+      create_deployments --all
+  # Preview variant B (docs/preview-devspace-design.md §4): run in-cluster with PR and SHA.
+  preview:
+    flags:
+      - name: pr
+        type: string
+      - name: sha
+        type: string
+    run: |-
+      create_deployments pilot \
+        --set image.tag=$(get_flag sha) \
+        --set host=pr-$(get_flag pr).preview.zenbyte.biz \
+        --set mongo.db=pr_$(get_flag pr) \
+        --set redis.prefix=pr$(get_flag pr): \
+        --set ingress.forwardAuthMiddleware=preview-sso-auth \
+        --set nodeSelector.homelab/role=agents
+
+deployments:
+  pilot:
+    helm:
+      releaseName: pilot
+      chart:
+        path: ./deploy/chart
+      values:
+        mongo:
+          db: dev_${DEV_ID}
+        redis:
+          prefix: dev${DEV_ID}:
+        nodeSelector:
+          homelab/role: agents
+
+dev:
+  api-orders:
+    imageSelector: ghcr.io/james-tronai/pilot-monorepo/api-orders
+    devImage: python:3.12-slim
+    workingDir: /app
+    sync:
+      - path: ./apps/api-orders:/app
+        excludePaths: [.venv, __pycache__]
+    command: ["sh", "-c"]
+    args: ["pip install -q uv && uv pip install --system -q . && exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]
+    ports:
+      - port: "8001:8000"
+  api-chat:
+    imageSelector: ghcr.io/james-tronai/pilot-monorepo/api-chat
+    devImage: python:3.12-slim
+    workingDir: /app
+    sync:
+      - path: ./apps/api-chat:/app
+        excludePaths: [.venv, __pycache__]
+    command: ["sh", "-c"]
+    args: ["pip install -q uv && uv pip install --system -q . && exec uvicorn app.main:app --reload --host 0.0.0.0 --port 8000"]
+    ports:
+      - port: "8002:8000"
+  web:
+    imageSelector: ghcr.io/james-tronai/pilot-monorepo/web
+    devImage: node:22-alpine
+    workingDir: /app
+    sync:
+      - path: ./apps/web:/app
+        excludePaths: [node_modules, dist]
+    env:
+      - name: API_ORDERS_URL
+        value: http://pilot-api-orders:8000
+      - name: API_CHAT_URL
+        value: http://pilot-api-chat:8000
+    command: ["sh", "-c"]
+    args: ["npm ci --silent && exec npm run dev"]
+    ports:
+      - port: "5173:5173"
