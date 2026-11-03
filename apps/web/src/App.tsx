@@ -54,7 +54,7 @@ export default function App() {
 
   return (
     <main style={{ fontFamily: 'system-ui', maxWidth: 640, margin: '2rem auto', lineHeight: 1.5 }}>
-      <h1>pilot-monorepo</h1>
+      <h1>pilot-monorepo (preview test)</h1>
       <p>
         web sha <code>{WEB_SHA}</code> · host <code>{location.host}</code>
       </p>
